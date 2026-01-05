@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Invias V51 - Pro Master</title>
+    
+    <!-- FIREBASE -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root { --blue: #004a87; --orange: #ff9800; --green: #2e7d32; --bg: #f4f6f8; --dark: #333; --indigo: #3f51b5; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 5px; overflow-x: hidden; }
+        .box { width: 100%; max-width: 650px; margin: 0 auto; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        h2 { color: var(--blue); margin: 0; font-size: 1.1rem; }
+        #status-indicator { font-size: 0.7rem; padding: 4px 8px; border-radius: 10px; font-weight: bold; background: #eee; color: #555; }
+        
+        .toolbar { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .btn-tool { flex: 1; padding: 8px; border-radius: 4px; border: none; font-weight: bold; font-size: 0.7rem; cursor: pointer; color: white; white-space: nowrap; }
+        .bg-excel { background: var(--green); } .bg-report { background: #008080; } .bg-stats { background: var(--indigo); }
+        .bg-import { background: #ff9800; position: relative; }
+        .bg-backup { background: #6a1b9a; }
+        .bg-restore { background: #555; position: relative; }
+        .bg-reset { background: #d32f2f; max-width: 40px; }
+        .file-hidden { position: absolute; top: 0; left: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+
+        .row { display: flex; gap: 5px; margin-bottom: 10px; } .col { flex: 1; }
+        label { display: block; font-weight: bold; font-size: 0.75rem; color: #555; margin-bottom: 2px; }
+        input, select { width: 100%; padding: 10px; font-size: 1rem; border: 2px solid #ccc; border-radius: 6px; box-sizing: border-box; text-align: center; }
+        input:focus { border-color: var(--blue); outline: none; background: #eef6fc; }
+        .input-locked { background: #e0e0e0; pointer-events: none; color: #777; }
+        .edit-label { color: var(--green) !important; } .edit-input { border-color: var(--green) !important; color: #1b5e20; font-weight: bold; }
+
+        .sign-img-table { width: 70px; height: 70px; object-fit: contain; border: 1px solid #ccc; border-radius: 4px; float: left; margin-right: 10px; background: white; cursor: zoom-in; }
+        .sign-img-search { width: 50px; height: 50px; object-fit: contain; float: left; margin-right: 10px; background: white; border-radius: 4px; border: 1px solid #ddd; }
+        .sign-img-catalog { width: 100px; height: 100px; object-fit: contain; background: white; border: 1px solid #eee; padding: 2px; margin-bottom: 5px; cursor: zoom-in; }
+        .id-badge { background: #e3f2fd; color: var(--blue); padding: 2px 5px; border-radius: 4px; font-family: monospace; font-weight: bold; font-size: 0.8em; }
+
+        .search-container { position: relative; margin-bottom: 15px; }
+        #search-box { width: 100%; padding: 12px; font-size: 1rem; border: 2px solid var(--blue); border-radius: 6px; font-weight: bold; text-align: left; }
+        #results-area { position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; max-height: 300px; overflow-y: auto; background: white; border: 1px solid #ccc; border-radius: 0 0 8px 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: none; }
+        .result-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; text-align: left; }
+        .result-item:hover { background: #e3f2fd; }
+        .result-create { padding: 15px; background: #e8f5e9; color: var(--green); font-weight: bold; text-align: center; cursor: pointer; }
+
+        .btn-catalog { width: 100%; background: white; border: 2px solid var(--blue); color: var(--blue); padding: 10px; border-radius: 6px; font-weight: bold; margin-bottom: 15px; cursor: pointer; }
+        .catalog-group { border: 1px solid #ddd; margin-bottom: 5px; border-radius: 4px; overflow: hidden; }
+        .group-header { background: #eee; padding: 10px; font-weight: bold; cursor: pointer; }
+        .group-content { display: none; padding: 10px; background: #fafafa; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; } 
+        .cat-item { text-align: center; border: 1px solid #eee; padding: 5px; background: white; cursor: pointer; border-radius: 4px; }
+        .cat-item:active { background: #e3f2fd; }
+
+        #btn-action { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; color: white; cursor: pointer; margin-top: 5px; }
+        .btn-punto { background: var(--blue); } .btn-tramo { background: var(--orange); color: #333; } .btn-update { background: #008080; }
+        .btn-cancel { width: 100%; padding: 10px; background: #777; color: white; border: none; border-radius: 6px; font-weight: bold; margin-top: 5px; display: none; cursor: pointer; }
+
+        .table-wrap { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { background: #444; color: white; padding: 8px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
+        .row-tramo { background: #fff8e1; border-left: 4px solid var(--orange); }
+        .btn-mini { padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 1rem; margin-right: 2px; }
+        .btn-edit { background: #ffc107; color: #333; } .btn-del { background: #ffcccc; color: #d32f2f; }
+
+        #pending-area { display: none; margin-bottom: 15px; border-bottom: 3px solid #ccc; padding-bottom: 15px; }
+        .tramo-card { background: #fff9c4; border: 2px solid #fbc02d; padding: 10px; border-radius: 8px; margin-bottom: 10px; position: relative; }
+        .tramo-inputs { display: flex; gap: 5px; align-items: center; margin-top: 5px; }
+        .btn-close-tramo { background: var(--green); color: white; border: none; padding: 8px; border-radius: 4px; width: 100%; font-weight: bold; margin-top: 5px; cursor: pointer; }
+        .btn-del-tramo { position: absolute; top: -5px; right: -5px; background: #d32f2f; color: white; border: none; width: 25px; height: 25px; border-radius: 50%; cursor: pointer; font-weight: bold; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-content { background: white; width: 95%; max-width: 500px; max-height: 90%; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+        .modal-header { padding: 15px; background: var(--blue); color: white; font-weight: bold; display: flex; justify-content: space-between; }
+        .modal-body { padding: 15px; overflow-y: auto; font-family: monospace; }
+        .close-btn { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <div class="header-top">
+        <h2>RUTA 2515 - NUBE</h2>
+        <div id="status-indicator">Conectando...</div>
+    </div>
+
+    <div class="toolbar">
+        <button class="btn-tool bg-import">📂 CSV <input type="file" class="file-hidden" id="csv-input" onchange="importarCSV(this)" accept=".csv"></button>
+        <button class="btn-tool bg-excel" onclick="descargarExcel()">📊 EXCEL</button>
+        <button class="btn-tool bg-backup" onclick="backupJSON()">💾 BACKUP</button>
+        <button class="btn-tool bg-report" onclick="generarReportePR()">📋 REPORTE</button>
+        <button class="btn-tool bg-restore">♻️ JSON <input type="file" class="file-hidden" id="json-input" onchange="restaurarJSON(this)"></button>
+        <button class="btn-tool bg-stats" onclick="location.reload()">⚠️ RECARGAR</button>
+    </div>
+
+    <div id="pending-area"></div>
+
+    <div class="row">
+        <div class="col"><label>PR INICIO</label><input type="number" id="pr" placeholder="0" oninput="syncInputs()"></div>
+        <div class="col"><label>METROS</label><input type="number" id="metros" placeholder="0000" oninput="syncInputs()"></div>
+    </div>
+
+    <div id="edit-closing-zone" style="display:none; background:#e8f5e9; padding:5px; border-radius:5px; margin-bottom:10px; border:1px solid var(--green);">
+        <div class="row">
+            <div class="col"><label class="edit-label">PR FINAL</label><input type="number" id="pr_fin_edit" class="edit-input"></div>
+            <div class="col"><label class="edit-label">M FINAL</label><input type="number" id="m_fin_edit" class="edit-input"></div>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <label>BUSCAR SEÑAL / ELEMENTO</label>
+        <input type="text" id="search-box" placeholder="🔍 Escribe código o nombre..." oninput="filtrarBusqueda()" autocomplete="off">
+        <div id="results-area"></div>
+    </div>
+
+    <button class="btn-catalog" onclick="mostrarCatalogo()">📖 VER CATÁLOGO CON FOTOS</button>
+
+    <div class="row">
+        <div class="col">
+            <select id="lado">
+                <option value="Derecho">Derecho 👉</option>
+                <option value="Izquierdo">Izquierdo 👈</option>
+                <option value="Separador">Separador 🛣️</option>
+                <option value="Separador Der">Separador Der ↗️</option>
+                <option value="Separador Izq">Separador Izq ↖️</option>
+                <option value="Ambos">Ambos ↔️</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <label>ELEMENTO SELECCIONADO: <span id="cod-badge" class="id-badge" style="float:right">S/C</span></label>
+            <input type="text" id="elemento-final" placeholder="Se llena automático..." style="font-weight:bold; color:var(--blue);">
+            <input type="hidden" id="categoria-final" value="OTRO">
+        </div>
+    </div>
+
+    <div class="row"><div class="col"><input type="text" id="detalle" placeholder="Detalle adicional (Opcional)"></div></div>
+
+    <button id="btn-action" class="btn-punto" onclick="procesar()">📍 GUARDAR NUBE</button>
+    <button id="btn-cancel" class="btn-cancel" onclick="cancelarEdicion()">❌ CANCELAR EDICIÓN</button>
+
+    <div style="display:flex; justify-content:center; gap:15px; margin-top:10px; padding:10px; background:#f0f0f0; border-radius:5px;">
+        <label style="color:var(--orange); font-weight:bold;"><input type="checkbox" id="check-tramo" onchange="toggleTramoManual()"> 🚧 Es Tramo</label>
+        <label style="color:var(--blue); font-weight:bold;"><input type="checkbox" id="check-reverse" onchange="toggleTramoManual()"> ⬅️ Al Revés</label>
+    </div>
+
+    <!-- AQUÍ ESTÁ EL SELECTOR DE ORDENAMIENTO QUE PEDISTE -->
+    <div style="text-align:right; margin-top:10px;">
+        <select id="sort-select" onchange="renderTabla()" style="padding:5px;">
+            <option value="CRONO" selected>🕒 Más Reciente</option>
+            <option value="GEO_DESC">📍 PR: Mayor a Menor</option>
+            <option value="GEO_ASC">📍 PR: Menor a Mayor</option>
+        </select>
+    </div>
+
+    <div class="table-wrap">
+        <table id="tabla-registros">
+            <thead><tr><th>Acción</th><th>ID / Ubic</th><th>Elemento</th><th>Lado</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODALES -->
+<div id="modal-catalog" class="modal"><div class="modal-content"><div class="modal-header">CATÁLOGO<button class="close-btn" onclick="cerrarModal('modal-catalog')">×</button></div><div class="modal-body" id="catalog-body"></div></div></div>
+<div id="modal-report" class="modal"><div class="modal-content"><div class="modal-header">REPORTE PR<button class="close-btn" onclick="cerrarModal('modal-report')">×</button></div><div class="modal-body" id="report-body"></div></div></div>
+
+<script>
+    // 1. CONFIGURACIÓN FIREBASE
+    const firebaseConfig = {
+        apiKey: "AIzaSyBbvbqKePdPjl4FkfOmpuWu8g9iN8rLoHw",
+        authDomain: "inventario-invias-ruta-2515.firebaseapp.com",
+        projectId: "inventario-invias-ruta-2515",
+        storageBucket: "inventario-invias-ruta-2515.firebasestorage.app",
+        messagingSenderId: "1038545790878",
+        appId: "1:1038545790878:web:a6f90a2a48ed530c64988f"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    db.enablePersistence({ synchronizeTabs: true })
+        .then(() => console.log("Offline OK"))
+        .catch(err => console.log("Offline Err", err));
+
+    const colRegistros = db.collection("registros");
+    const colPendientes = db.collection("pendientes");
+
+    // 2. BASE DE DATOS (COMPLETA)
+    const DB_ITEMS = [
+        {cat:"AUX", sc:"Placas complementarias", c:"S/C", n:"PLACA COMPLEMENTARIA (Adosada)", t:false},
+        {cat:"SI", sc:"Dirección / Orientación", c:"SI-05", n:"SEÑALES DE DIRECCIÓN / PRESEÑALIZACIÓN (Genérica)", t:false},
+        {cat:"SI", sc:"Dirección / Orientación", c:"SI-05A", n:"SALIDA INMEDIATA", t:false},
+        {cat:"SI", sc:"Dirección / Orientación", c:"SI-05B", n:"DESTINOS EN GLORIETA", t:false},
+        {cat:"SI", sc:"Dirección / Orientación", c:"SI-05C", n:"RUTA ALTERNATIVA", t:false},
+        {cat:"SI", sc:"Dirección / Orientación", c:"SI-05D", n:"SEÑALES DE PRESEÑALIZACIÓN (Específica)", t:false},
+        {cat:"SI", sc:"Dirección / Orientación", c:"SI-06", n:"SEÑALES DE CONFIRMACIÓN", t:false},
+        {cat:"SI", sc:"Dirección / Orientación", c:"S/C", n:"BALIZAS DE ACERCAMIENTO (Salida)", t:false},
+        {cat:"SI", sc:"Identificación vial", c:"SI-01", n:"RUTA NACIONAL", t:false},
+        {cat:"SI", sc:"Identificación vial", c:"SI-01A", n:"RUTA DEPARTAMENTAL", t:false},
+        {cat:"SI", sc:"Identificación vial", c:"SI-02", n:"RUTA PANAMERICANA", t:false},
+        {cat:"SI", sc:"Identificación vial", c:"SI-03", n:"RUTA MARGINAL DE LA SELVA", t:false},
+        {cat:"SI", sc:"Identificación vial", c:"SI-04", n:"POSTES DE REFERENCIA", t:false},
+        {cat:"SI", sc:"Identificación vial", c:"SI-26", n:"NOMBRE DE CALLES Y NOMENCLATURA URBANA", t:false},
+        {cat:"SI", sc:"Identificación vial y localización", c:"S/C", n:"SEÑAL DE LOCALIZACIÓN (Nombre de lugar)", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-07", n:"SITIO DE PARQUEO", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-07A", n:"ZONAS ESPECIALES DE PARQUEO", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-07B", n:"ZONAS ESPECIALES DE PARQUEO DE BICICLETAS", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-07C", n:"ZONAS ESPECIALES DE PARQUEO DE VEHÍCULOS ELÉCTRICOS", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-08", n:"PARADERO DE BUSES", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-09", n:"ESTACIONAMIENTO DE TAXIS", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-09A", n:"ESTACIONAMIENTO DE TRICIMÓVILES", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-10", n:"SERVICIO DE TRANSBORDADOR", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-11", n:"VÍA PARA CICLISTAS", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-11A", n:"PRIORIDAD VÍA PARA CICLISTAS", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-13", n:"ZONA MILITAR", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-14", n:"AEROPUERTO", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-15", n:"HOSPEDAJE", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-16", n:"PRIMEROS AUXILIOS", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-16A", n:"HOSPITAL", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-17", n:"SERVICIOS SANITARIOS", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-18", n:"RESTAURANTE", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-19", n:"TELÉFONO", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-20", n:"IGLESIA", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-21", n:"TALLER", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-22", n:"ESTACIÓN DE SERVICIO", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-22A", n:"ESTACIÓN DE CARGA DE VEHÍCULOS ELÉCTRICOS", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-23", n:"MONTALLANTAS", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-25", n:"PASO O INSTALACIÓN ACCESIBLE", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-25A", n:"CRUCE DE PERSONAS CON DISCAPACIDAD VISUAL", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-27", n:"SEGURIDAD VIAL", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-27A", n:"SEGURIDAD VIAL EN INTERSECCIONES SEMAFORIZADAS", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-27B", n:"RADAR PEDAGÓGICO", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-29", n:"TRANSPORTE FERROVIARIO", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-30", n:"TRANSPORTE MASIVO", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-30A", n:"TRANSPORTE POR CABLE", t:false},
+        {cat:"SI", sc:"Servicios generales", c:"SI-31", n:"ZONA RECREATIVA", t:false},
+        {cat:"SI", sc:"Seguridad", c:"SI-32", n:"TSUNAMI RUTA EVACUACIÓN", t:false},
+        {cat:"SI", sc:"Seguridad", c:"SI-33", n:"ZONA RIESGO TSUNAMI", t:false},
+        {cat:"SI", sc:"Seguridad", c:"SI-34", n:"PUNTO ENCUENTRO TSUNAMI", t:false},
+        {cat:"SI", c:"SI-35", n:"SISTEMA PARA DETECCIÓN ELECTRÓNICA DE INFRACCIONES", t:false},
+        {cat:"SI", c:"SI-35A", n:"ZONA DE CONTROL CON SISTEMA TECNOLÓGICO DE DETECCIÓN", t:false},
+        {cat:"CICLO", sc:"Guía para ciclistas", c:"SIC-01", n:"NOMBRE O CÓDIGO DE LA CICLO-INFRAESTRUCTURA", t:false},
+        {cat:"CICLO", sc:"Guía para ciclistas", c:"SIC-02", n:"DIRECCIÓN INMEDIATA DE LA CICLO-INFRAESTRUCTURA", t:false},
+        {cat:"CICLO", sc:"Guía para ciclistas", c:"SIC-02A", n:"UBICACIÓN Y DIRECCIÓN ANTICIPADA", t:false},
+        {cat:"CICLO", sc:"Guía para ciclistas", c:"SIC-02B", n:"DIRECCIÓN ESQUEMÁTICA", t:false},
+        {cat:"CICLO", sc:"Guía para ciclistas", c:"SIC-04", n:"FIN DE CICLORRUTA", t:false},
+        {cat:"CICLO", sc:"Guía para ciclistas", c:"SIC-05", n:"INICIO DE CICLORRUTA", t:false},
+        {cat:"CICLO", sc:"Guía para ciclistas", c:"SIC-06", n:"ZONA COMPARTIDA CICLISTAS – PEATONES", t:false},
+        {cat:"CICLO", sc:"Guía para ciclistas", c:"SIC-09", n:"VÍA EXCLUSIVA", t:false},
+        {cat:"CICLO", sc:"Guía para ciclistas", c:"SIC-11", n:"PARADERO EN LA CICLO-INFRAESTRUCTURA", t:false},
+        {cat:"CICLO", sc:"Guía para ciclistas", c:"SIC-12", n:"CONFIRMACIÓN DE DESTINO", t:false},
+        {cat:"CICLO", sc:"Guía para ciclistas", c:"SIC-12A", n:"CONFIRMACIÓN DE UBICACIÓN", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-01", n:"CURVA CERRADA A LA IZQUIERDA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-02", n:"CURVA CERRADA A LA DERECHA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-03", n:"CURVA PRONUNCIADA A LA IZQUIERDA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-04", n:"CURVA PRONUNCIADA A LA DERECHA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-05", n:"CURVA Y CONTRA-CURVA CERRADA PRIMERA A LA IZQUIERDA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-06", n:"CURVA Y CONTRA-CURVA CERRADA PRIMERA A LA DERECHA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-07", n:"ZONA DE CURVAS SUCESIVAS LA PRIMERA A LA IZQUIERDA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-08", n:"ZONA DE CURVAS SUCESIVAS LA PRIMERA A LA DERECHA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-09", n:"CURVA Y CONTRA-CURVA PRONUNCIADA PRIMERA A LA IZQUIERDA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-10", n:"CURVA Y CONTRA-CURVA PRONUNCIADA PRIMERA A LA DERECHA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-69", n:"CURVA MUY CERRADA A LA IZQUIERDA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-70", n:"CURVA MUY CERRADA A LA DERECHA", t:false},
+        {cat:"SP", sc:"Características geométricas", c:"SP-75", n:"DELINEADOR DE CURVA HORIZONTAL", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-23", n:"PROXIMIDAD DE SEMÁFORO", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-29", n:"PROXIMIDAD A SEÑAL DE “PARE”", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-33", n:"PROXIMIDAD DE SEÑAL “CEDA EL PASO”", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-39", n:"DOS SENTIDOS DE TRÁNSITO", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-41", n:"TRES CARRILES DE TRÁNSITO (UNO EN CONTRAFLUJO)", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-43", n:"TRES CARRILES DE TRÁNSITO (DOS EN CONTRAFLUJO)", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-45", n:"MAQUINARIA AGRÍCOLA EN LA VÍA", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-46", n:"ZONA DE PEATONES", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-46A", n:"PROXIMIDAD DE CRUCE PEATONAL", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-46B", n:"UBICACIÓN DE CRUCE PEATONAL", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-46C", n:"ZONA CON PRIORIDAD PEATONAL", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-47", n:"ZONA ESCOLAR", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-47A", n:"PROXIMIDAD A CRUCE ESCOLAR", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-47B", n:"UBICACIÓN DE CRUCE ESCOLAR", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-48", n:"NIÑOS JUGANDO", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-49", n:"PRESENCIA DE ANIMALES EN LA VÍA", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-49A", n:"CRUCE DE ANIMALES EN LA VÍA", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-55", n:"INICIACIÓN DE SEPARADOR (DOS SENTIDOS)", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-55A", n:"INICIACIÓN DE SEPARADOR (UN SENTIDO)", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-56", n:"TERMINACIÓN DE VÍA CON SEPARADOR (DOS SENTIDOS)", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-56A", n:"TERMINACIÓN DE VÍA CON SEPARADOR (UN SENTIDO)", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-59", n:"CICLISTAS EN LA VÍA", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-59A", n:"PROXIMIDAD A CRUCE DE CICLISTAS", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-59B", n:"UBICACIÓN DE CRUCE DE CICLISTAS", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-79", n:"VEHÍCULOS DE CARGA O EXTRA-DIMENSIONADOS", t:false},
+        {cat:"SP", sc:"Características operativas", c:"SP-80", n:"TRICIMÓVILES EN LA VÍA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-11", n:"INTERSECCIÓN DE VÍAS", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-12", n:"VÍA LATERAL IZQUIERDA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-13", n:"VÍA LATERAL DERECHA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-14", n:"INTERSECCIÓN EN “T”", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-15", n:"BIFURCACIÓN EN “Y”", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-16", n:"BIFURCACIÓN A LA IZQUIERDA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-17", n:"BIFURCACIÓN A LA DERECHA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-18", n:"INTERSECCIÓN ESCALONADA PRIMERA IZQUIERDA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-19", n:"INTERSECCIÓN ESCALONADA PRIMERA DERECHA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-20", n:"GLORIETA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-21", n:"INCORPORACIÓN DE TRÁNSITO DESDE LA IZQUIERDA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-22", n:"INCORPORACIÓN DE TRÁNSITO DESDE LA DERECHA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-52", n:"CRUCE FERROVIARIO A NIVEL SIN BARRERA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-52A", n:"CRUCE FERROVIARIO A NIVEL CON BARRERAS", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-53", n:"BARRERA", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-54", n:"CRUZ DE SAN ANDRÉS", t:false},
+        {cat:"SP", sc:"Intersecciones con otras vías", c:"SP-81", n:"CRUCE FERROVIARIO CON DESNIVEL DE RASANTE", t:false},
+        {cat:"SP", sc:"Pendientes longitudinales", c:"SP-27", n:"PENDIENTE FUERTE DE DESCENSO", t:false},
+        {cat:"SP", sc:"Pendientes longitudinales", c:"SP-27A", n:"PENDIENTE FUERTE DE ASCENSO", t:false},
+        {cat:"SP", sc:"Restricciones físicas de la vía", c:"SP-28", n:"REDUCCIÓN DE CALZADA A AMBOS LADOS", t:false},
+        {cat:"SP", sc:"Restricciones físicas de la vía", c:"SP-30", n:"REDUCCIÓN DE LA CALZADA A LA IZQUIERDA", t:false},
+        {cat:"SP", sc:"Restricciones físicas de la vía", c:"SP-31", n:"REDUCCIÓN DE LA CALZADA A LA DERECHA", t:false},
+        {cat:"SP", sc:"Restricciones físicas de la vía", c:"SP-32", n:"ENSANCHAMIENTO SIMÉTRICO DE LA CALZADA", t:false},
+        {cat:"SP", sc:"Restricciones físicas de la vía", c:"SP-34", n:"ENSANCHAMIENTO DE LA CALZADA A LA IZQUIERDA", t:false},
+        {cat:"SP", sc:"Restricciones físicas de la vía", c:"SP-35", n:"ENSANCHAMIENTO DE LA CALZADA A LA DERECHA", t:false},
+        {cat:"SP", sc:"Restricciones físicas de la vía", c:"SP-36", n:"PUENTE ANGOSTO", t:false},
+        {cat:"SP", sc:"Restricciones físicas de la vía", c:"SP-38", n:"PESO MÁXIMO BRUTO VEHICULAR PERMITIDO", t:false},
+        {cat:"SP", sc:"Restricciones físicas de la vía", c:"SP-50", n:"ALTURA LIBRE", t:false},
+        {cat:"SP", sc:"Restricciones físicas de la vía", c:"SP-51", n:"ANCHO LIBRE", t:false},
+        {cat:"SP", sc:"Restricciones físicas de la vía", c:"SP-76", n:"LONGITUD MÁXIMA PERMITIDA", t:false},
+        {cat:"SP", sc:"Situaciones especiales", c:"SP-37", n:"TÚNEL", t:false},
+        {cat:"SP", sc:"Situaciones especiales", c:"SP-42", n:"ZONA DE DESPRENDIMIENTO DE ROCAS", t:false},
+        {cat:"SP", sc:"Situaciones especiales", c:"SP-44", n:"SUPERFICIE DESLIZANTE", t:false},
+        {cat:"SP", sc:"Situaciones especiales", c:"SP-67", n:"RIESGO DE SINIESTRO", t:false},
+        {cat:"SP", sc:"Situaciones especiales", c:"SP-71", n:"PROYECCIÓN DE GRAVILLA", t:false},
+        {cat:"SP", sc:"Situaciones especiales", c:"SP-72", n:"SALIDA DE VEHÍCULOS DE BOMBEROS", t:false},
+        {cat:"SP", sc:"Situaciones especiales", c:"SP-73", n:"RÁFAGAS DE VIENTO LATERAL", t:false},
+        {cat:"SP", sc:"Situaciones especiales", c:"SP-74", n:"DESNIVEL SEVERO", t:false},
+        {cat:"SP", sc:"Situaciones especiales", c:"SP-77", n:"ZONA DE NIEBLA", t:false},
+        {cat:"SP", sc:"Situaciones especiales", c:"SP-78", n:"PUENTE LEVADIZO", t:false},
+        {cat:"SP", sc:"Superficie de rodadura", c:"SP-24", n:"SUPERFICIE RIZADA", t:false},
+        {cat:"SP", sc:"Superficie de rodadura", c:"SP-25", n:"PROXIMIDAD DE RESALTO", t:false},
+        {cat:"SP", sc:"Superficie de rodadura", c:"SP-25A", n:"UBICACIÓN DE RESALTO", t:false},
+        {cat:"SP", sc:"Superficie de rodadura", c:"SP-25B", n:"PROXIMIDAD A REDUCTOR TRAPEZOIDAL / POMPEYANO", t:false},
+        {cat:"SP", sc:"Superficie de rodadura", c:"SP-25C", n:"UBICACIÓN DE REDUCTOR TRAPEZOIDAL / POMPEYANO", t:false},
+        {cat:"SP", sc:"Superficie de rodadura", c:"SP-26", n:"DEPRESIÓN", t:false},
+        {cat:"SP", sc:"Superficie de rodadura", c:"SP-57", n:"FINAL DEL PAVIMENTO", t:false},
+        {cat:"SP", sc:"Superficie de rodadura", c:"SP-57A", n:"CAMBIO DE TEXTURA EN SUPERFICIE DE RODADURA", t:false},
+        {cat:"CICLO", sc:"Riesgos para ciclistas", c:"SPC-01", n:"VEHÍCULOS EN LA CICLO-INFRAESTRUCTURA", t:false},
+        {cat:"CICLO", sc:"Riesgos para ciclistas", c:"SPC-02", n:"DESCENSO FUERTE", t:false},
+        {cat:"CICLO", sc:"Riesgos para ciclistas", c:"SPC-03", n:"ASCENSO FUERTE", t:false},
+        {cat:"CICLO", sc:"Riesgos para ciclistas", c:"SPC-04", n:"CIRCULACIÓN DE BICICLETAS A CONTRAFLUJO", t:false},
+        {cat:"SR", sc:"Autorización", c:"SR-34", n:"ZONA DE ESTACIONAMIENTO DE TAXI", t:false},
+        {cat:"SR", sc:"Autorización", c:"SR-40", n:"ZONA EXCLUSIVA DE PARADERO", t:false},
+        {cat:"SR", sc:"Autorización", c:"SR-42", n:"ZONA DE CARGUE Y DESCARGUE", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-03", n:"DIRECCIÓN OBLIGADA O SIGA DE FRENTE", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-05", n:"GIRO A LA IZQUIERDA SOLAMENTE", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-07", n:"GIRO A LA DERECHA SOLAMENTE", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-09", n:"GIRO EN “U” SOLAMENTE", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-17", n:"VEHÍCULOS PESADOS A LA DERECHA", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-19", n:"PEATONES A LA IZQUIERDA", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-35", n:"CIRCULACIÓN CON LUCES BAJAS", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-36", n:"RETÉN", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-38", n:"SENTIDO ÚNICO DE CIRCULACIÓN", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-39", n:"CIRCULACIÓN EN AMBOS SENTIDOS", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-44", n:"CONSERVAR ESPACIAMIENTO", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-45", n:"INDICACIÓN DE SEPARADOR DE TRÁNSITO A LA IZQUIERDA", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-46", n:"INDICACIÓN DE SEPARADOR DE TRÁNSITO A LA DERECHA", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-58", n:"CARRIL EXCLUSIVO", t:false},
+        {cat:"SR", sc:"Obligación", c:"SR-59", n:"DISTANCIA LATERAL DE SEGURIDAD CON CICLISTA", t:false},
+        {cat:"SR", sc:"Otras prohibiciones", c:"SR-18A", n:"PROHIBIDA CIRCULACIÓN DE VEHÍCULOS CON EJE ADICIONAL", t:false},
+        {cat:"SR", sc:"Otras prohibiciones", c:"SR-18B", n:"PROHIBIDA CIRCULACIÓN DE VEHÍCULOS DE MERCANCÍAS PELIGROSAS", t:false},
+        {cat:"SR", sc:"Otras prohibiciones", c:"SR-20", n:"PROHIBIDA CIRCULACIÓN DE PEATONES", t:false},
+        {cat:"SR", sc:"Otras prohibiciones", c:"SR-28", n:"PROHIBIDO PARQUEAR", t:false},
+        {cat:"SR", sc:"Otras prohibiciones", c:"SR-28A", n:"PROHIBIDO PARQUEAR O DETENERSE", t:false},
+        {cat:"SR", sc:"Otras prohibiciones", c:"SR-29", n:"PROHIBIDO PITAR", t:false},
+        {cat:"SR", sc:"Otras prohibiciones", c:"SR-41", n:"PROHIBIDO EL ASCENSO Y DESCENSO DE PASAJEROS", t:false},
+        {cat:"SR", sc:"Otras prohibiciones", c:"SR-43", n:"PROHIBIDO EL CARGUE Y DESCARGUE", t:false},
+        {cat:"SR", sc:"Otras prohibiciones", c:"SR-47", n:"NO BLOQUEAR INTERSECCIÓN", t:false},
+        {cat:"SR", sc:"Prioridad / Prelación", c:"SR-01", n:"PARE", t:false},
+        {cat:"SR", sc:"Prioridad / Prelación", c:"SR-02", n:"CEDA EL PASO", t:false},
+        {cat:"SR", sc:"Prioridad / Prelación", c:"SR-49", n:"PRIORIDAD AL SENTIDO CONTRARIO", t:false},
+        {cat:"SR", sc:"Prohibición / Restricción (Texto)", c:"S/C", n:"SEÑAL REGLAMENTARIA RECTANGULAR (Solo Texto)", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-16", n:"PROHIBIDA CIRCULACIÓN DE VEHÍCULOS AUTOMOTORES", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-18", n:"PROHIBIDA CIRCULACIÓN DE VEHÍCULOS DE CARGA", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-21", n:"PROHIBIDA CIRCULACIÓN DE CABALGADURAS", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-22", n:"PROHIBIDA CIRCULACIÓN DE BICICLETAS Y MOTOCICLOS", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-23", n:"PROHIBIDA CIRCULACIÓN DE MOTOCICLETAS", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-24", n:"PROHIBIDA CIRCULACIÓN DE MAQUINARIA AGRÍCOLA", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-25", n:"PROHIBIDA CIRCULACIÓN DE VEHÍCULOS DE TRACCIÓN ANIMAL", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-51", n:"PROHIBIDA CIRCULACIÓN DE CARROS DE MANO", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-52", n:"PROHIBIDA CIRCULACIÓN DE BUSES", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-53", n:"PROHIBIDA CIRCULACIÓN DE MOTOCARROS", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-54", n:"PROHIBIDA CIRCULACIÓN DE CUATRIMOTOS", t:false},
+        {cat:"SR", sc:"Prohibición de circulación por clase de vehículo", c:"SR-56", n:"ZONA PEATONAL (o PRIORIDAD PEATONAL)", t:false},
+        {cat:"SR", sc:"Prohibición de maniobras y giros", c:"SR-04", n:"NO PASE", t:false},
+        {cat:"SR", sc:"Prohibición de maniobras y giros", c:"SR-06", n:"PROHIBIDO GIRAR A LA IZQUIERDA", t:false},
+        {cat:"SR", sc:"Prohibición de maniobras y giros", c:"SR-08", n:"PROHIBIDO GIRAR A LA DERECHA", t:false},
+        {cat:"SR", sc:"Prohibición de maniobras y giros", c:"SR-10", n:"PROHIBIDO GIRAR EN “U”", t:false},
+        {cat:"SR", sc:"Prohibición de maniobras y giros", c:"SR-14", n:"PROHIBIDO CAMBIO DE CALZADA IZQUIERDA A DERECHA", t:false},
+        {cat:"SR", sc:"Prohibición de maniobras y giros", c:"SR-14A", n:"PROHIBIDO CAMBIO DE CALZADA DERECHA A IZQUIERDA", t:false},
+        {cat:"SR", sc:"Prohibición de maniobras y giros", c:"SR-26", n:"NO ADELANTAR", t:false},
+        {cat:"SR", sc:"Prohibición de maniobras y giros", c:"SR-50", n:"PROHIBIDO GIRAR A LA DERECHA CON LUZ ROJA", t:false},
+        {cat:"SR", sc:"Restricción", c:"SR-11", n:"CIRCULACIÓN EN AMBOS SENTIDOS", t:false},
+        {cat:"SR", sc:"Restricción", c:"SR-12", n:"CIRCULACIÓN EN TRES CARRILES (UNO EN CONTRAFLUJO)", t:false},
+        {cat:"SR", sc:"Restricción", c:"SR-13", n:"CIRCULACIÓN EN TRES CARRILES (DOS EN CONTRAFLUJO)", t:false},
+        {cat:"SR", sc:"Restricción", c:"SR-30", n:"VELOCIDAD MÁXIMA PERMITIDA", t:false},
+        {cat:"SR", sc:"Restricción", c:"SR-30A", n:"VELOCIDAD MÍNIMA PERMITIDA", t:false},
+        {cat:"SR", sc:"Restricción", c:"SR-30B", n:"VELOCIDAD MÁXIMA PERMITIDA SALIDA", t:false},
+        {cat:"SR", sc:"Restricción", c:"SR-31", n:"PESO MÁXIMO BRUTO PERMITIDO", t:false},
+        {cat:"SR", sc:"Restricción", c:"SR-32", n:"ALTURA MÁXIMA PERMITIDA", t:false},
+        {cat:"SR", sc:"Restricción", c:"SR-33", n:"ANCHO MÁXIMO PERMITIDO", t:false},
+        {cat:"SR", sc:"Restricción", c:"SR-48", n:"FIN PROHIBICIÓN", t:false},
+        {cat:"SR", sc:"Restricción", c:"SR-55", n:"LONGITUD MÁXIMA PERMITIDA", t:false},
+        {cat:"CICLO", sc:"Regulaciones para ciclistas", c:"SRC-01", n:"CONSERVE LA DERECHA", t:false},
+        {cat:"CICLO", sc:"Regulaciones para ciclistas", c:"SRC-02", n:"OBLIGATORIO DESCENDER DE LA BICICLETA", t:false},
+        {cat:"CICLO", sc:"Regulaciones para ciclistas", c:"SRC-03", n:"CIRCULACIÓN NO COMPARTIDA", t:false},
+        {cat:"CICLO", sc:"Regulaciones para ciclistas", c:"SRC-04", n:"CIRCULACIÓN PROHIBIDA DE MASCOTAS", t:false},
+        {cat:"CICLO", sc:"Regulaciones para ciclistas", c:"SRC-05", n:"CIRCULACIÓN COMPARTIDA", t:false},
+        {cat:"CICLO", sc:"Regulaciones para ciclistas", c:"SRC-06", n:"CICLO-INFRAESTRUCTURA", t:false},
+        {cat:"CICLO", sc:"Regulaciones para ciclistas", c:"SRC-07", n:"CARRIL BUS-BICI", t:false},
+        {cat:"CICLO", sc:"Regulaciones para ciclistas", c:"SRC-08", n:"CARRIL CICLOPREFERENTE", t:false},
+        {cat:"CICLO", sc:"Regulaciones para ciclistas", c:"SRC-09", n:"BANDA CICLOPREFERENTE", t:false},
+        {cat:"SI", sc:"Seguridad en túneles", c:"SIT-01", n:"SALIDA DE EMERGENCIA A LA IZQUIERDA", t:false},
+        {cat:"SI", sc:"Seguridad en túneles", c:"SIT-02", n:"SALIDA DE EMERGENCIA A LA DERECHA", t:false},
+        {cat:"SI", sc:"Seguridad en túneles", c:"SIT-03", n:"RUTA DE ESCAPE A SALIDA DE EMERGENCIA A LA IZQUIERDA", t:false},
+        {cat:"SI", sc:"Seguridad en túneles", c:"SIT-04", n:"RUTA DE ESCAPE A SALIDA DE EMERGENCIA A LA DERECHA", t:false},
+        {cat:"SI", sc:"Seguridad en túneles", c:"SIT-05", n:"TELÉFONO DE EMERGENCIA", t:false},
+        {cat:"SI", sc:"Seguridad en túneles", c:"SIT-06", n:"EXTINTOR DE INCENDIOS", t:false},
+        {cat:"SI", sc:"Seguridad en túneles", c:"SIT-07", n:"HIDRANTE Y MANGUERA PARA APAGAR INCENDIOS", t:false},
+        {cat:"SI", sc:"Seguridad en túneles", c:"SIT-08", n:"BAHÍA DE ESTACIONAMIENTO PARA EMERGENCIAS", t:false},
+        {cat:"SI", sc:"Seguridad en túneles", c:"SIT-09", n:"SISTEMA DE RADIO DEDICADO", t:false},
+        {cat:"ST", sc:"Biciturismo", c:"S/C", n:"BALIZA DE SEÑALIZACIÓN PARA BICITURISMO", t:false},
+        {cat:"ST", sc:"Información de destino", c:"S/C", n:"SEÑAL TURÍSTICA DE DESTINO (Direccional)", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-01", n:"ZONA DE CAMPING", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-02", n:"PLAYA", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-03", n:"MUSEO", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-04", n:"MUELLE", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-05", n:"ZOOLÓGICO", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-06", n:"PUNTO DE INFORMACIÓN TURÍSTICA", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-07", n:"ARTESANÍAS", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-08", n:"BIENES ARQUEOLÓGICOS", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-09", n:"CUERPO DE AGUA", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-10", n:"POLIDEPORTIVO", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-11", n:"MIRADOR", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-12", n:"ALQUILER DE AUTOS", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-12A", n:"ALQUILER DE BICICLETAS O PATINETAS", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-13", n:"ATRACTIVO NATURAL", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-14", n:"VOLCÁN", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-15", n:"NEVADO", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-16", n:"TERMAL", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-17", n:"CASCADA", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-18", n:"PESCA", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-19", n:"ARRECIFE CORALINO", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-20", n:"CAVERNA", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-21", n:"PÁRAMO", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-22", n:"RÍO", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-23", n:"PARQUE NACIONAL NATURAL", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-24", n:"OBSERVATORIO DE FLORA Y FAUNA", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-25", n:"SENDERO PARA EXCURSIONISTAS", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-26", n:"PARAPENTE", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-27", n:"ESCALADA", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-28", n:"RAFTING", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-29", n:"COMUNIDAD INDÍGENA", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-30", n:"MONUMENTO NACIONAL", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-31", n:"PATRIMONIO DE LA HUMANIDAD", t:false},
+        {cat:"ST", sc:"Turísticas y patrimoniales", c:"ST-32", n:"CENTRO HISTÓRICO", t:false},
+        {cat:"OBRA", sc:"Drenaje", c:"CUN", n:"CUNETA (Concreto)", d:"", t:true}, 
+        {cat:"OBRA", sc:"Seguridad", c:"DEF", n:"DEFENSA METÁLICA", d:"", t:true},
+        {cat:"OBRA", sc:"Peatonal", c:"AND", n:"ANDÉN / BORDILLO", d:"", t:true}, 
+        {cat:"OBRA", sc:"Estructura", c:"PTE", n:"PUENTE", d:"", t:true},
+        {cat:"OBRA", sc:"Drenaje", c:"BOX", n:"BOX CULVERT", d:"", t:false}, 
+        {cat:"OBRA", sc:"Drenaje", c:"ALC", n:"ALCANTARILLA", d:"", t:false},
+        {cat:"OBRA", sc:"Seguridad", c:"CER", n:"CERRAMIENTO", d:"", t:true}, 
+        {cat:"OBRA", sc:"Estructura", c:"MUR", n:"MURO CONTENCIÓN", d:"", t:true},
+        {cat:"OTRO", sc:"Manual", c:"DAÑO", n:"BACHE / HUECO", d:"", t:false}
+    ];
+
+    let localData = [];
+    let localPending = [];
+    let editandoID = null;
+    let editandoCol = null;
+    let codActual = "S/C";
+
+    colRegistros.onSnapshot(snapshot => {
+        localData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        actualizarEstado(true);
+        renderTabla();
+        if(localData.length > 0 && !editandoID) actualizarPlaceholder(localData[0].m);
+    }, error => {
+        console.error(error);
+        actualizarEstado(false);
+    });
+
+    colPendientes.onSnapshot(snapshot => {
+        localPending = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderPendientes();
+    });
+
+    function formatMeters(val) {
+        if (!val && val !== 0) return "";
+        let num = parseInt(val); if (isNaN(num)) return "";
+        return num.toString().padStart(4, '0');
+    }
+
+    function generarIDVisual(codigo, timestamp) {
+        if(!codigo || codigo === "null") codigo = "SC";
+        let suffix = timestamp ? timestamp.toString().slice(-4) : Math.floor(Math.random()*9000)+1000;
+        return `${codigo}-${suffix}`;
+    }
+
+    function actualizarEstado(online) {
+        let el = document.getElementById('status-indicator');
+        if (online) { el.innerText = "☁️ CONECTADO"; el.style.background = "#d4edda"; el.style.color = "green"; }
+        else { el.innerText = "⚡ OFFLINE"; el.style.background = "#fff3cd"; el.style.color = "orange"; }
+    }
+
+    function actualizarPlaceholder(m) { document.getElementById('metros').placeholder = formatMeters(m); }
+
+    window.syncInputs = () => {
+        let p = document.getElementById('pr').value; 
+        let m = formatMeters(document.getElementById('metros').value);
+        document.querySelectorAll('.cl-pr').forEach(i => { if(!i.disabled) i.value = p; });
+        document.querySelectorAll('.cl-m').forEach(i => { if(!i.disabled) i.value = m; });
+    };
+
+    window.toggleTramoManual = () => {
+        let esTramo = document.getElementById('check-tramo').checked;
+        let btn = document.getElementById('btn-action');
+        if(editandoID) {
+            btn.className = "btn-update"; btn.innerText = "🔄 ACTUALIZAR";
+        } else if(esTramo) {
+            btn.className = "btn-tramo"; btn.innerText = "⏳ INICIAR TRAMO";
+        } else {
+            btn.className = "btn-punto"; btn.innerText = "📍 GUARDAR";
+        }
+    };
+
+    window.procesar = () => {
+        let pr = document.getElementById('pr').value;
+        let m = document.getElementById('metros').value;
+        let elVal = document.getElementById('elemento-final').value; 
+        let det = document.getElementById('detalle').value;
+        let lado = document.getElementById('lado').value;
+        let cat = document.getElementById('categoria-final').value;
+        m = formatMeters(m);
+
+        if(pr==="" || m==="" || !elVal) { alert("⚠️ Faltan datos."); return; }
+
+        let datos = {
+            pr: pr, m: m, lado: lado, elem: elVal, cod: codActual, det: det, cat: cat,
+            creado: Date.now()
+        };
+
+        if(editandoID) {
+            let ref = editandoCollection === 'registros' ? colRegistros.doc(editandoID) : colPendientes.doc(editandoID);
+            let updateData = { ...datos };
+            if(editandoCollection === "registros" && document.getElementById('edit-closing-zone').style.display !== 'none') {
+                let prF = document.getElementById('pr_fin_edit').value;
+                let mF = formatMeters(document.getElementById('m_fin_edit').value);
+                let start = (parseInt(pr)*1000) + parseInt(m);
+                let end = (parseInt(prF)*1000) + parseInt(mF);
+                updateData.pr_fin = prF; updateData.m_fin = mF;
+                updateData.len = Math.abs(end - start);
+            }
+            ref.update(updateData).then(window.cancelarEdicion);
+        } else {
+            datos.id_visual = generarIDVisual(codActual, datos.creado);
+            let esReverso = document.getElementById('check-reverse').checked;
+            datos.isReverse = esReverso;
+
+            if(document.getElementById('check-tramo').checked) {
+                if(esReverso) { datos.pr_fin = pr; datos.m_fin = m; datos.pr = ""; datos.m = ""; }
+                colPendientes.add(datos);
+            } else {
+                datos.tipo = 'PUNTO'; datos.pr_fin=''; datos.m_fin=''; datos.len=0;
+                colRegistros.add(datos);
+            }
+            document.getElementById('metros').value = ''; 
+            document.getElementById('detalle').value = '';
+            document.getElementById('elemento-final').value = '';
+            document.getElementById('metros').focus();
+        }
+    };
+
+    window.editarItem = (id, collectionName) => {
+        let item = (collectionName === 'registros') ? localData.find(i => i.id === id) : localPending.find(i => i.id === id);
+        if(!item) return;
+
+        document.getElementById('pr').value = item.pr; 
+        document.getElementById('metros').value = formatMeters(item.m);
+        document.getElementById('lado').value = item.lado;
+        document.getElementById('elemento-final').value = item.elem;
+        document.getElementById('categoria-final').value = item.cat;
+        document.getElementById('detalle').value = item.det;
+        codActual = item.cod || "S/C";
+        document.getElementById('cod-badge').innerText = codActual;
+
+        if(item.tipo === 'TRAMO' && collectionName === 'registros') {
+            document.getElementById('edit-closing-zone').style.display = 'block';
+            document.getElementById('pr_fin_edit').value = item.pr_fin;
+            document.getElementById('m_fin_edit').value = formatMeters(item.m_fin);
+        } else { document.getElementById('edit-closing-zone').style.display = 'none'; }
+
+        editandoID = id; editandoCollection = collectionName;
+        document.getElementById('btn-cancel').style.display = 'block';
+        document.getElementById('btn-action').innerText = "🔄 ACTUALIZAR";
+        window.scrollTo(0,0);
+    };
+
+    window.borrarItem = (id, colName) => {
+        if(confirm("¿Borrar?")) {
+            let col = (colName === 'registros') ? colRegistros : colPendientes;
+            col.doc(id).delete();
+        }
+    };
+
+    window.cancelarEdicion = () => {
+        editandoID = null; 
+        document.getElementById('btn-cancel').style.display = 'none';
+        document.getElementById('edit-closing-zone').style.display = 'none';
+        document.getElementById('btn-action').innerText = "📍 GUARDAR";
+        document.getElementById('metros').value = '';
+        document.getElementById('elemento-final').value = '';
+    };
+
+    window.actualizarPendiente = (id, field, value) => {
+        if(field.includes('m')) value = formatMeters(value);
+        colPendientes.doc(id).update({ [field]: value });
+    };
+
+    window.cerrar = (id) => {
+        let item = localPending.find(p => p.id === id);
+        let pf = document.getElementById(`pf-${id}`).value;
+        let mf = formatMeters(document.getElementById(`mf-${id}`).value);
+        let pi = document.getElementById(`pi-${id}`).value;
+        let mi = formatMeters(document.getElementById(`mi-${id}`).value);
+
+        if(!pf || !mf || !pi || !mi) return alert("Faltan datos");
+
+        let nuevo = { ...item }; delete newItem.id;
+        nuevo.pr = pi; nuevo.m = mi; nuevo.pr_fin = pf; nuevo.m_fin = mf;
+        let start = (parseInt(pi)*1000)+parseInt(mi); 
+        let end = (parseInt(pf)*1000)+parseInt(mf);
+        nuevo.len = Math.abs(end - start); nuevo.tipo = 'TRAMO';
+        
+        colRegistros.add(nuevo);
+        colPendientes.doc(id).delete();
+    };
+
+    window.render = () => {
+        let cont = document.getElementById('pending-area');
+        let prV = document.getElementById('pr').value; 
+        let mV = formatMeters(document.getElementById('metros').value);
+        
+        cont.innerHTML = '';
+        if(localPending.length > 0) {
+            cont.style.display = 'block';
+            localPending.forEach(p => {
+                let isRev = p.isReverse;
+                let vPI = p.pr || ""; let vMI = p.m || "";
+                let vPF = p.pr_fin || prV; let vMF = p.m_fin || mV;
+                let disI = isRev ? '' : 'disabled style="background:#eee"';
+                let disF = isRev ? 'disabled style="background:#eee"' : '';
+                let idV = p.id_visual || generarIDVisual(p.cod, 0);
+
+                cont.innerHTML += `
+                <div class="tramo-card" style="border-color:${isRev?'#2196f3':'#fbc02d'}">
+                    <button class="btn-del-tramo" onclick="borrarItem('${p.id}', 'pendientes')">×</button>
+                    <div class="tramo-title ${isRev?'reverse-title':''}">
+                        <span>${isRev ? '⏪ DESDE FINAL' : '🚧 EN PROGRESO'} <small class="id-badge">${idV}</small></span>
+                        <span style="font-size:0.8rem; color:#555">${p.elem}</span>
+                    </div>
+                    <div style="font-size:0.8em; margin-bottom:5px;">${p.lado}</div>
+                    <div class="tramo-inputs">
+                        <label>INI:</label>
+                        <input type="number" id="pi-${p.id}" value="${vPI}" class="cl-pr" style="width:50px" ${disI} onchange="actualizarPendiente('${p.id}', 'pr', this.value)">
+                        <input type="number" id="mi-${p.id}" value="${vMI}" class="cl-m" style="width:60px" ${disI} onchange="actualizarPendiente('${p.id}', 'm', this.value)">
+                    </div>
+                    <div class="tramo-inputs">
+                        <label>FIN:</label>
+                        <input type="number" id="pf-${p.id}" value="${vPF}" class="cl-pr" style="width:50px" ${disF} onchange="actualizarPendiente('${p.id}', 'pr_fin', this.value)">
+                        <input type="number" id="mf-${p.id}" value="${vMF}" class="cl-m" style="width:60px" ${disF} onchange="actualizarPendiente('${p.id}', 'm_fin', this.value)">
+                    </div>
+                    <button class="btn-close-tramo" onclick="cerrar('${p.id}')">COMPLETAR TRAMO</button>
+                </div>`;
+            });
+        } else { cont.style.display = 'none'; }
+
+        renderTabla();
+    }
+
+    function renderTabla() {
+        let tbody = document.querySelector("#tabla-registros tbody");
+        tbody.innerHTML = "";
+        
+        let list = [...localData];
+        let sort = document.getElementById('sort-select').value;
+        const gp = (i) => (parseInt(i.pr||0)*1000) + parseInt(i.m||0);
+
+        if(sort === 'CRONO') list.sort((a,b) => (b.creado || 0) - (a.creado || 0));
+        else if(sort === 'GEO_ASC') list.sort((a,b) => gp(a) - gp(b));
+        else if(sort === 'GEO_DESC') list.sort((a,b) => gp(b) - gp(a));
+
+        list.forEach(r => {
+            let imgCode = (r.cod && r.cod !== 'S/C') ? r.cod : 'GENERICO';
+            let imgTag = `<img src="img/${imgCode}.png" class="sign-img-table" onerror="this.style.display='none'">`;
+            let loc = `${r.pr}+${r.m}`;
+            if(r.tipo === 'TRAMO') loc += `<br>⬇<br>${r.pr_fin}+${r.m_fin}`;
+            let idV = r.id_visual || generarIDVisual(r.cod, r.creado);
+
+            tbody.innerHTML += `
+            <tr class="${r.tipo==='TRAMO'?'row-tramo':''}">
+                <td>
+                    <button class="btn-mini btn-edit" onclick="editarItem('${r.id}', 'registros')">✏️</button>
+                    <button class="btn-mini btn-del" onclick="borrarItem('${r.id}', 'registros')">🗑️</button>
+                </td>
+                <td><span class="id-badge">${idV}</span><br>${loc}</td>
+                <td>
+                    ${imgTag}
+                    <div style="overflow:hidden">
+                        <strong>${r.elem}</strong><br>
+                        <small>${r.cod}</small><br>
+                        <i style="font-size:0.8em;color:#666">${r.det || ''}</i>
+                    </div>
+                </td>
+                <td>${r.lado}<br><strong>${r.len ? r.len+'m' : ''}</strong></td>
+            </tr>`;
+        });
+    }
+
+    window.filtrarBusqueda = () => {
+        let q = document.getElementById('search-box').value.toLowerCase();
+        let div = document.getElementById('results-area');
+        div.innerHTML = '';
+        if(q.length < 1) { div.style.display = 'none'; return; }
+        
+        let matches = DB_ITEMS.filter(i => i.n.toLowerCase().includes(q) || i.c.toLowerCase().includes(q));
+        div.style.display = 'block';
+
+        let manDiv = document.createElement('div');
+        manDiv.className = 'result-create';
+        manDiv.innerText = `➕ USAR MANUAL: "${q}"`;
+        manDiv.onclick = () => { 
+             document.getElementById('elemento-final').value = document.getElementById('search-box').value;
+             document.getElementById('categoria-final').value = "OTRO";
+             codActual = "S/C"; document.getElementById('cod-badge').innerText = "S/C";
+             div.style.display = 'none'; document.getElementById('search-box').value='';
+        };
+        div.appendChild(manDiv);
+
+        matches.forEach(i => {
+            let d = document.createElement('div'); d.className = 'result-item';
+            let img = `<img src="img/${i.c}.png" class="sign-img-search" onerror="this.style.display='none'">`;
+            d.innerHTML = `${img}<div class="res-info"><span class="res-code">${i.c}</span><strong>${i.n}</strong></div>`;
+            d.onclick = () => {
+                document.getElementById('elemento-final').value = i.n;
+                document.getElementById('categoria-final').value = i.cat;
+                codActual = i.c; document.getElementById('cod-badge').innerText = i.c;
+                document.getElementById('check-tramo').checked = i.t;
+                window.toggleTramoManual();
+                document.getElementById('search-box').value = '';
+                div.style.display = 'none';
+            };
+            div.appendChild(d);
+        });
+    };
+
+    window.backupJSON = () => {
+        let dataToSave = { list: localData, pending: localPending };
+        let blob = new Blob([JSON.stringify(dataToSave)], {type: "application/json"});
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = `RESPALDO_FIREBASE_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+    };
+
+    window.restaurarJSON = (inp) => {
+        let f = inp.files[0];
+        if(!f) return;
+        
+        let r = new FileReader();
+        r.onload = async (e) => {
+            try {
+                let json = JSON.parse(e.target.result);
+                let lista = json.list || [];
+                let pendientes = json.pending || [];
+                let total = lista.length + pendientes.length;
+
+                if(total === 0) { alert("El archivo está vacío."); return; }
+
+                // --- NUEVA LÓGICA DE DECISIÓN ---
+                let opcion = prompt(
+                    `⚠️ ARCHIVO CON ${total} REGISTROS.\n\n` +
+                    `Escribe el número de tu opción:\n` +
+                    `1. BORRAR TODO Y REEMPLAZAR (Cuidado)\n` +
+                    `2. SOLO AÑADIR (Mantener lo actual)\n`
+                );
+
+                if (opcion === "1") {
+                    if(!confirm("‼️ ¿ESTÁS 100% SEGURO?\nSe borrará todo lo que hay en la nube ahora.")) return;
+                    document.getElementById('status-indicator').innerText = "🧹 LIMPIANDO...";
+                    
+                    // Borrar colecciones actuales
+                    const borrarCol = async (colRef) => {
+                        const snapshot = await colRef.get();
+                        const batch = db.batch();
+                        snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+                        await batch.commit();
+                    };
+                    await borrarCol(colRegistros);
+                    await borrarCol(colPendientes);
+                } else if (opcion !== "2") {
+                    return; // Cancelar
+                }
+
+                document.getElementById('status-indicator').innerText = "⏳ SUBIENDO...";
+                document.getElementById('status-indicator').style.background = "orange";
+
+                const subirEnLotes = async (datos, coleccionDestino) => {
+                    const tamanoLote = 400;
+                    for (let i = 0; i < datos.length; i += tamanoLote) {
+                        const loteActual = datos.slice(i, i + tamanoLote);
+                        const batch = db.batch();
+                        loteActual.forEach(item => {
+                            let docRef = coleccionDestino.doc();
+                            let limpio = { ...item };
+                            delete limpio.id; 
+                            if(!limpio.id_visual) limpio.id_visual = generarIDVisual(limpio.cod, Date.now());
+                            if(!limpio.creado) limpio.creado = Date.now(); // Asegurar fecha para orden
+                            batch.set(docRef, limpio);
+                        });
+                        await batch.commit();
+                    }
+                };
+
+                if(lista.length > 0) await subirEnLotes(lista, colRegistros);
+                if(pendientes.length > 0) await subirEnLotes(pendientes, colPendientes);
+
+                alert("✅ ¡ÉXITO! Base de datos actualizada.");
+                location.reload();
+
+            } catch(x) { 
+                console.error(x);
+                alert("❌ Error procesando el archivo JSON.\nVerifica que sea el formato correcto."); 
+            }
+        };
+        r.readAsText(f);
+    };
+
+    window.descargarExcel = () => {
+        let all = [...localData].sort((a,b) => ((parseInt(a.pr)*1000)+parseInt(a.m)) - ((parseInt(b.pr)*1000)+parseInt(b.m)));
+        let csv = "\uFEFFID_VISUAL;PR_INI;M_INI;PR_FIN;M_FIN;LADO;CATEGORIA;CODIGO;ELEMENTO;DETALLE;LONGITUD\n";
+        all.forEach(r => { 
+            let mf = r.m_fin ? formatMeters(r.m_fin) : "";
+            let idV = r.id_visual || generarIDVisual(r.cod, r.creado);
+            csv += `${idV};${r.pr};${r.m};${r.pr_fin||''};${mf};${r.lado};${r.cat};${r.cod};${r.elem};${r.det};${r.len||''}\n`;
+        });
+        localPending.forEach(p => { 
+            let idV = p.id_visual || generarIDVisual(p.cod, 0);
+            csv += `${idV};${p.pr};${p.m};;;${p.lado};${p.cat};${p.cod};${p.elem};${p.det};PENDIENTE\n`; 
+        });
+        let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a'); a.href = url; a.download = "INVENTARIO_NUBE.csv"; a.click();
+    };
+
+    document.addEventListener('click', e => {
+        if(e.target.tagName === 'IMG' && e.target.className.includes('sign-img')) {
+            let v = document.createElement('div');
+            v.style = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:3000;display:flex;justify-content:center;align-items:center";
+            v.innerHTML = `<img src="${e.target.src}" style="max-width:95%;max-height:95%;border-radius:10px;border:2px solid white">`;
+            v.onclick = () => v.remove();
+            document.body.appendChild(v);
+        }
+    });
+
+    window.mostrarCatalogo = () => document.getElementById('modal-catalog').style.display = 'flex';
+    window.cerrarModal = (id) => document.getElementById(id).style.display = 'none';
+
+    let catContainer = document.getElementById('catalog-body');
+    let cats = ["SR", "SP", "SI", "ST", "OBRA", "CICLO", "AUX", "OTRO"];
+    cats.forEach(c => {
+        let group = document.createElement('div'); group.className = 'catalog-group';
+        group.innerHTML = `<div class="group-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display=='grid'?'none':'grid'">${c}</div>`;
+        let content = document.createElement('div'); content.className = 'group-content';
+        DB_ITEMS.filter(i => i.cat === c).forEach(item => {
+            let d = document.createElement('div'); d.className = 'cat-item';
+            let img = `<img src="img/${item.c}.png" class="sign-img-catalog" onerror="this.src='img/SC.png'">`;
+            d.innerHTML = `${img}<br><b>${item.c}</b><br><small>${item.n}</small>`;
+            d.onclick = () => {
+                document.getElementById('elemento-final').value = item.n;
+                document.getElementById('categoria-final').value = item.cat;
+                codActual = item.c; document.getElementById('cod-badge').innerText = item.c;
+                document.getElementById('check-tramo').checked = item.t;
+                window.toggleTramoManual(); window.cerrarModal('modal-catalog');
+            };
+            content.appendChild(d);
+        });
+        group.appendChild(content); catContainer.appendChild(group);
+    });
+
+</script>
+</body>
+</html>
